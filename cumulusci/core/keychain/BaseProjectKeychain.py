@@ -1,11 +1,14 @@
 from __future__ import print_function
 
+import sarge
+
 from cumulusci.core.config import BaseConfig
 from cumulusci.core.config import ScratchOrgConfig
 from cumulusci.core.config import ServiceConfig
 from cumulusci.core.exceptions import OrgNotFound
 from cumulusci.core.exceptions import ServiceNotConfigured
 from cumulusci.core.exceptions import ServiceNotValid
+from cumulusci.core.sfdx import sfdx
 
 
 class BaseProjectKeychain(BaseConfig):
@@ -71,7 +74,7 @@ class BaseProjectKeychain(BaseConfig):
     def _load_services(self):
         pass
 
-    def create_scratch_org(self, org_name, config_name, days=None, set_password=False):
+    def create_scratch_org(self, org_name, config_name, days=None, set_password=True):
         """ Adds/Updates a scratch org config to the keychain from a named config """
         scratch_config = getattr(
             self.project_config, "orgs__scratch__{}".format(config_name)
@@ -154,6 +157,12 @@ class BaseProjectKeychain(BaseConfig):
         self.unset_default_org()
         org.config["default"] = True
         self.set_org(org)
+        if org.created:
+            sfdx(
+                sarge.shell_format(
+                    "force:config:set defaultusername={}", org.sfdx_alias
+                )
+            )
 
     def unset_default_org(self):
         """ unset the default orgs for tasks """
@@ -162,6 +171,7 @@ class BaseProjectKeychain(BaseConfig):
             if org_config.default:
                 del org_config.config["default"]
                 self.set_org(org_config)
+        sfdx("force:config:set defaultusername=")
 
     def get_org(self, name):
         """ retrieve an org configuration by name key """

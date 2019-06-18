@@ -7,8 +7,8 @@ from cumulusci.core.config import BaseProjectConfig
 from cumulusci.core.config import TaskConfig
 from cumulusci.core.config import OrgConfig
 from cumulusci.tasks.metadata.package import metadata_sort_key
-from cumulusci.tasks.metadata.package import AuraBundleParser
 from cumulusci.tasks.metadata.package import BaseMetadataParser
+from cumulusci.tasks.metadata.package import BundleParser
 from cumulusci.tasks.metadata.package import BusinessProcessParser
 from cumulusci.tasks.metadata.package import CustomLabelsParser
 from cumulusci.tasks.metadata.package import CustomObjectParser
@@ -23,6 +23,7 @@ from cumulusci.tasks.metadata.package import ParserConfigurationError
 from cumulusci.tasks.metadata.package import RecordTypeParser
 from cumulusci.tasks.metadata.package import UpdatePackageXml
 from cumulusci.utils import temporary_dir
+from cumulusci.utils import touch
 
 __location__ = os.path.dirname(os.path.realpath(__file__))
 
@@ -120,8 +121,7 @@ class TestBaseMetadataParser(unittest.TestCase):
                 "Account.object",
                 "Custom__c.object",
             ):
-                with open(filename, "w") as f:
-                    pass
+                touch(filename)
 
             parser = BaseMetadataParser("TestMDT", path, "object", delete=True)
             parser.parse_item = mock.Mock()
@@ -148,6 +148,13 @@ class TestMetadataFilenameParser(unittest.TestCase):
         result = parser._parse_item("Test.object")
         self.assertEqual(["Test"], result)
 
+    def test_parse_item_translates_namespace_tokens(self):
+        with temporary_dir() as path:
+            touch("___NAMESPACE___Foo__c.object")
+            parser = MetadataFilenameParser("TestMDT", path, "object", delete=False)
+            parser.parse_items()
+        self.assertEqual(["%%%NAMESPACE%%%Foo__c"], parser.members)
+
 
 class TestMetadataFolderParser(unittest.TestCase):
     def test_parse_item(self):
@@ -166,6 +173,27 @@ class TestMetadataFolderParser(unittest.TestCase):
             with open(os.path.join(path, "file"), "w"):
                 pass
             parser = MetadataFolderParser("TestMDT", path, "object", delete=False)
+            self.assertEqual([], parser._parse_item("file"))
+
+
+class TestBundleParser(unittest.TestCase):
+    def test_parse_item(self):
+        with temporary_dir() as path:
+            item_path = os.path.join(path, "Test")
+            os.mkdir(item_path)
+            with open(os.path.join(item_path, ".hidden"), "w"):
+                pass
+            # subitems should be ignored
+            with open(os.path.join(item_path, "Test.object"), "w"):
+                pass
+            parser = BundleParser("TestMDT", path, "object", delete=False)
+            self.assertEqual(["Test"], parser._parse_item("Test"))
+
+    def test_parse_item__non_directory(self):
+        with temporary_dir() as path:
+            with open(os.path.join(path, "file"), "w"):
+                pass
+            parser = BundleParser("TestMDT", path, "object", delete=False)
             self.assertEqual([], parser._parse_item("file"))
 
 
@@ -196,6 +224,7 @@ class TestMetadataXmlElementParser(unittest.TestCase):
     def test_parser__missing_item_xpath(self):
         with self.assertRaises(ParserConfigurationError):
             parser = MetadataXmlElementParser("TestMDT", None, "test", False)
+            self.assertIsNotNone(parser)
 
     def test_parser__missing_name(self):
         with temporary_dir() as path:
@@ -259,13 +288,6 @@ class TestBusinessProcessParser(unittest.TestCase):
             "BusinessProcess", None, "object", True, "./sf:businessProcesses"
         )
         self.assertTrue(parser.check_delete_excludes("asdf"))
-
-
-class TestAuraBundleParser(unittest.TestCase):
-    def test_parse_item(self):
-        parser = AuraBundleParser("AuraDefinitionBundle", None, None, False)
-        self.assertEqual(["Test"], parser._parse_item("Test"))
-        self.assertEqual([], parser._parse_item(".hidden"))
 
 
 class TestDocumentParser(unittest.TestCase):

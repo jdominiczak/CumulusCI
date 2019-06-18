@@ -2,6 +2,165 @@
 History
 =======
 
+2.5.2 (2019-06-10)
+------------------
+
+Issues fixed:
+
+* When generating package.xml, translate ``___NAMESPACE___`` tokens in filenames into ``%%%NAMESPACE%%%`` tokens in package.xml (#1104).
+* Avoid extraneous output when ``--json`` output was requested (#1103).
+* Display OS notification when a task or flow completes even if it failed.
+* Robot Framework: Added logic to retry the initial page load if it is not loading successfully.
+* Internal API change: Errors while processing a response from the Metadata API are now raised as MetadataParseError.
+
+2.5.1 (2019-05-31)
+------------------
+
+Issues fixed:
+
+* Fixed ``cci service connect`` when run outside of a directory containing a CumulusCI project.
+
+2.5.0 (2019-05-25)
+------------------
+
+Breaking changes:
+
+* We reorganized the flows for setting up a package for regression testing for better symmetry with other flows.
+  If you were running the ``install_regression`` flow before, you now probably want ``regression_org``.
+
+  Details: The ``install_regression`` flow now installs the package _without_ configuring it.
+  There is a new ``config_regression`` flow to configure the package (it defaults to calling ``config_managed``)
+  and a ``regression_org`` flow that includes both ``install_regression`` and ``config_regression``.
+
+New features:
+
+* CumulusCI now has experimental support for deploying projects in `DX source format <https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_source_file_format.htm>`_.
+  To enable this, set ``source_format: sfdx`` in the project section of ``cumulusci.yml``.
+  CumulusCI will deploy DX-format projects to scratch orgs using ``sfdx force:source:push`` and to other orgs using the Metadata API (by converting to metadata source format in a temporary directory).
+* Setting a default org in CumulusCI (using ``cci org default`` or the ``--default`` flag when creating a scratch org) will now also update the sfdx ``defaultusername``. (#868)
+* When connecting to GitHub using ``cci service connect github``, CumulusCI will now check to make sure the credentials are valid before saving them.
+* Robot Framework:
+
+  * Added a framework for creating "page object" classes to contain keywords related to a particular page or component.
+  * The ``robot`` task now takes a ``name`` option to control the name of the robot suite in output.
+  * Updates to the keyword ``Open Test Browser``:
+
+    * It allows you to open more than one browser in a single test case. (#1068)
+    * It sets the default size for the browser window to 1280x1024.
+    * Added a new keyword argument ``size`` to override the default size.
+    * Added a new keyword argument ``alias`` to let you assign an alias to multiple browser windows.
+
+Issues fixed:
+
+* Robot Framework: Fixed a bug where the ``Delete Session Records`` keyword would skip deleting some records. (#973)
+* If Salesforce returns an error response while refreshing an OAuth token, CumulusCI will now show the response instead of just the HTTP status code.
+* Fixed a bug in reporting errors from the Metadata API if the response contains ``componentFailures`` with no ``problem`` or ``problemType``.
+
+
+2.4.4 (2019-05-09)
+------------------
+
+New features:
+
+* Added tasks ``list_changes`` and ``retrieve_changes`` which interact with source tracking in scratch orgs to handle retrieving changed metadata as Metadata API format source.
+* Added task ``EnsureRecordTypes`` to generate a Record Type and optional Business Process for a specific sObject and deploy the metadata, if the object does not already have Record Types.
+* The ``update_admin_profile`` task now uses Python string formatting on the ``package.xml`` file used for retrieve. This allows injection of namespace prefixes using ``{managed}`` and ``{namespaced_org}``.
+
+Issues fixed:
+
+* If CumulusCI gets a connection error while trying to call the Salesforce Metadata API, it will now retry several times before giving up.
+* The GitHub release notes parser now recognizes Issues Closed if they are linked in Markdown format.
+* Robot Framework: Fixed a locator used by the ``Select App Launcher App`` keyword to work in Summer '19.
+* The ``cci project init`` command now uses an updated repository URL when extending EDA.
+
+2.4.3 (2019-04-26)
+------------------
+
+* Allow configuration of the email address assigned to scratch org users, with the order of priority being (1) any ``adminEmail`` key in the scratch org definition; (2) the ``email_address`` property on the scratch org configuration in ``cumulusci.yml``; (3) the ``user.email`` configuration property in Git.
+* CumulusCI can now handle building static resource bundles (``*.resource``) while deploying using the Metadata API. To use this option, specify the ``static_resource_path`` option for the deploy task. Any subdirectory in this path will be turned into a resource file and added to the package during deployment. There must be a corresponding ``*.resource-meta.xml`` file for each static resource bundle.
+* Bulk data tasks: Fixed a bug that added extra underscores to field names when processing lookups.
+* Robot Framework: The Salesforce library now has the ability to switch between different sets of locators based on the Salesforce version, and thanks to it we've fixed the robot so it can click on modal buttons in the Summer '19 release.
+* The ``cci project init`` command now generates projects with a different preferred structure for Robot Framework tests and resources, with everything inside the ``robot`` directory. Existing projects with tests in the ``tests`` directory should continue to work.
+
+2.4.2 (2019-04-22)
+------------------
+
+* The ``purgeOnDelete`` flag for the ``deploy`` task will now automatically be set to false when
+  deploying metadata to production orgs (previously deployment would fail on production orgs
+  if this flag was true).
+* The installation documentation now recommends using ``pipx`` to install CumulusCI on Windows,
+  so that you don't have to set up a virtualenv manually.
+
+2.4.1 (2019-04-09)
+------------------
+
+Changes:
+
+* Updated the default Salesforce Metadata API version to 45.0
+* The scratch org definition files generated by ``cci project init`` now use ``orgPreferenceSettings`` instead of the deprecated ``orgPreferences``.
+* The ``metadeploy_publish`` task now defaults to describing tasks based on ``Deploy`` as "metadata" steps instead of "other".
+
+Issues Fixed:
+
+* Fixed a couple problems with generating passwords for new scratch orgs:
+
+  * A project's predefined scratch org configs now default to ``set_password: True`` (which was already the case for orgs created explicitly using cci org scratch).
+  * A scratch org config's ``set_password`` flag is now retained when recreating an expired org. (Fixes #670)
+
+* Fixed the logic for finding the most recent GitHub release so that it now only considers tags that start with the project's git ``prefix_release``.
+* Fixed the ``install_prod_no_config`` flow. The ``deploy_post`` task was not injecting namespace tokens correctly.
+* Fixed the ``connected_app`` task to work with version 7 of the sfdx CLI. (Fixes #1013)
+* Robot Framework: Fixed the ``Populate Field`` keyword to work around intermittent problems clearing existing field values.
+
+2.4.0 (2019-03-18)
+------------------
+
+Critical changes:
+
+* If you are publishing installation plans to MetaDeploy, there have been some significant changes:
+
+    * Plan options are now read from a new ``plans`` section of ``cumulusci.yml`` instead of from task options. This means that a single run of the task can now handle publishing multiple plans, and there is now a generic ``metadeploy_publish`` task which can be used instead of setting up different tasks for each project.
+    * Plan steps are now defined inline in the plan configuration rather than by naming a flow. This makes it easier to configure a plan that is like an existing flow with one or two adjustments.
+    * There is now a way to customize MetaDeploy step settings such as ``name`` and ``is_required`` on a step-by-step basis, using ``ui_options`` in the plan config.
+    * The task will now find or create a ``PlanTemplate`` as necessary, matching existing PlanTemplates on the product and plan name. This means the plan config no longer needs to reference a plan template by id, which makes it easier to publish to multiple instances of MetaDeploy.
+
+* The ``install_upgrade`` flow was renamed to ``install_regression`` to better reflect the use case it is focused on. There are also a few updates to what it does:
+
+    * It will now install the latest beta release of managed packages instead of the latest final release.
+    * It now runs the ``config_managed`` flow after upgrading the managed package, so that it will work if this flow has references to newly added components.
+
+Changes:
+
+* Added support for deploying Lightning Web Components.
+
+* Fixed the bulk data load task to handle null values in a datetime column.
+
+* The `ci_master` flow now explicitly avoids trying to install beta releases of dependencies (since it's meant for use with non-scratch orgs and we block installing betas there since they can't be upgraded).
+
+2.3.4 (2019-03-06)
+------------------
+
+* Added a new flow, ``install_upgrade``, which can be used for testing package upgrades.
+  It installs and configures the _previous_ release of the package, then installs the latest release.
+* Fixed an error when using ``cci org info --json`` (fixes #1013).
+
+2.3.3 (2019-02-28)
+------------------
+
+* Fixed a bug where flow options specified on the command line were not passed to tasks correctly.
+* ``cci service connect`` now shows a more helpful error message if you call it with a service name that CumulusCI doesn't know about. Fixes #752.
+* Deleted scratch orgs will no longer show the number of days since they were created in ``cci org list``. Thanks to @21aslade for the fix.
+* Updates to the MetaDeploy publish task:
+
+  * It is now possible to publish a new plan for an existing version.
+  * It is now possible to specify the AllowedList to which a plan is visible.
+
+* Updates to Robot Framework support:
+
+  * Fixed a bug in the ``robot`` task: it now accepts an option called ``test`` rather than ``tests``, since the latter was ignored by Robot Framework.
+  * Fixed some stability problems with the ``Populate Field`` keyword.
+  * The ``robot_libdoc`` task has been replaced with a new task of the same name that can generate a single HTML document for multiple keyword files by passing a comma-separated list of files to the ``path`` option.
+
 2.3.2 (2019-02-19)
 ------------------
 

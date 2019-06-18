@@ -18,7 +18,7 @@ from contextlib import contextmanager
 from datetime import datetime
 
 import requests
-
+import sarge
 import xml.etree.ElementTree as ET
 
 CUMULUSCI_PATH = os.path.realpath(
@@ -31,6 +31,7 @@ UTF8 = text_to_native_str("UTF-8")
 
 BREW_UPDATE_CMD = "brew upgrade cumulusci"
 PIP_UPDATE_CMD = "pip install --upgrade cumulusci"
+PIPX_UPDATE_CMD = "pipx upgrade cumulusci"
 
 
 def parse_api_datetime(value):
@@ -337,8 +338,8 @@ def zip_tokenize_namespace(zip_src, namespace, logger=None):
 
 
 def zip_clean_metaxml(zip_src, logger=None):
-    """ Given a zipfile, cleans all *-meta.xml files in the zip for
-        deployment by stripping all <packageVersions/> elements
+    """ Given a zipfile, cleans all ``*-meta.xml`` files in the zip for
+    deployment by stripping all ``<packageVersions/>`` elements
     """
     zip_dest = zipfile.ZipFile(io.BytesIO(), "w", zipfile.ZIP_DEFLATED)
     changed = []
@@ -366,14 +367,14 @@ def zip_clean_metaxml(zip_src, logger=None):
 
 def doc_task(task_name, task_config, project_config=None, org_config=None):
     """ Document a (project specific) task configuration in RST format. """
-    from cumulusci.core.utils import import_class
+    from cumulusci.core.utils import import_global
 
     doc = []
     doc.append("{}\n==========================================\n".format(task_name))
     doc.append("**Description:** {}\n".format(task_config.description))
     doc.append("**Class::** {}\n".format(task_config.class_path))
 
-    task_class = import_class(task_config.class_path)
+    task_class = import_global(task_config.class_path)
     task_docs = textwrap.dedent(task_class.task_docs.strip("\n"))
     if task_docs:
         doc.append(task_docs + "\n")
@@ -458,6 +459,12 @@ def temporary_dir():
             shutil.rmtree(d)
 
 
+def touch(path):
+    """Ensure a file exists."""
+    with open(path, "a"):
+        pass
+
+
 def in_directory(filepath, dirpath):
     """Returns a boolean for whether filepath is contained in dirpath.
 
@@ -508,15 +515,19 @@ def random_alphanumeric_underscore(length):
 
 
 def get_cci_upgrade_command():
-    homebrew_paths = ["cellar", "linuxbrew"]
-    if any(path in CUMULUSCI_PATH.lower() for path in homebrew_paths):
-        return BREW_UPDATE_CMD
-    else:
-        return PIP_UPDATE_CMD
+    commands_by_path = {
+        "cellar": BREW_UPDATE_CMD,
+        "linuxbrew": BREW_UPDATE_CMD,
+        "pipx": PIPX_UPDATE_CMD,
+    }
+    for path, cmd in commands_by_path.items():
+        if path in CUMULUSCI_PATH.lower():
+            return cmd
+    return PIP_UPDATE_CMD
 
 
 def convert_to_snake_case(content):
-    s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", content)
+    s1 = re.sub("([^_])([A-Z][a-z]+)", r"\1_\2", content)
     return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
 
 
@@ -524,3 +535,16 @@ def os_friendly_path(path):
     if os.sep != "/":
         path = path.replace("/", os.sep)
     return path
+
+
+def get_git_config(config_key):
+    p = sarge.Command(
+        sarge.shell_format('git config --get "{0!s}"', config_key),
+        stderr=sarge.Capture(buffer_size=-1),
+        stdout=sarge.Capture(buffer_size=-1),
+        shell=True,
+    )
+    p.run()
+    config_value = io.TextIOWrapper(p.stdout).read().strip()
+
+    return config_value if config_value and not p.returncode else None

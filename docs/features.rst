@@ -9,9 +9,9 @@ Org Keychain
 
 CumulusCI uses OAuth connections to Salesforce orgs stored in a configurable keychain which by default stores in AES encrypted files in the user's home directory.  A few important things to note about CumulusCI's keychain:
 
-* The keychain is specific to your local git repository.  Thus, there is no need to have orgs named `ProjectA_dev` since CumulusCI's keychain is already specific to `ProjectA` by being inside the local repo.  You can keep your org names simple like `dev`.
+* The keychain is specific to your local git repository.  Thus, there is no need to have orgs named ``ProjectA_dev`` since CumulusCI's keychain is already specific to ``ProjectA`` by being inside the local repo.  You can keep your org names simple like ``dev``.
 * CumulusCI's keychain can handle both persistent orgs (Prod, Sandbox, Packaging, DE) and Salesforce DX Scratch Orgs.
-* The keychain class is pluggable allowing different keychain implementations such as `EnvironmentProjectKeychain`
+* The keychain class is pluggable allowing different keychain implementations such as ``EnvironmentProjectKeychain``
 
 Org List
 --------
@@ -34,7 +34,7 @@ You can log into any org in the keychain in a new browser tab:
 Persistent Orgs
 ---------------
 
-The CumulusCI keychain can capture and store OAuth credentials to persistent orgs (Prod, Sandbox, Packaging, DE) using the `cci org connect` command:
+The CumulusCI keychain can capture and store OAuth credentials to persistent orgs (Prod, Sandbox, Packaging, DE) using the ``cci org connect`` command:
 
 .. code-block:: console
 
@@ -45,7 +45,7 @@ This command will open a browser window where you log into the org you want to c
 Specifying a Different Login URL
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-In some cases, such as Sandboxes, you need to specify a different login url when connecting to the org.  You can use the `--sandbox` or `--login-url` options:
+In some cases, such as Sandboxes, you need to specify a different login url when connecting to the org.  You can use the ``--sandbox`` or ``--login-url`` options:
 
 .. code-block:: console
 
@@ -64,7 +64,7 @@ Thus far we've talked about orgs being confined to an individual project's keych
 
     $ cci org connect <org_name> --global
 
-With the `--global` flag, the org is created in CumulusCI's global keychain and thus available to all projects under the same org_name.
+With the ``--global`` flag, the org is created in CumulusCI's global keychain and thus available to all projects under the same org_name.
 
 Individual projects can also override the global org by defining a project org with the same org_name.
 
@@ -74,10 +74,10 @@ CumulusCI & Salesforce DX Scratch Orgs
 
 CumulusCI takes a different approach to creating and using scratch orgs that aims to make the process easier and more portable.  In short, a scratch org in CumulusCI's keychain starts out as simply a lazy configuration to generate a scratch org with certain parameters.  The scratch org is only actually generated the first time you attempt to use the scratch org from CumulusCI's keychain.
 
-Some other key differences between CumulusCI scratch orgs and orgs created directly via `sfdx force:org:create`:
+Some other key differences between CumulusCI scratch orgs and orgs created directly via ``sfdx force:org:create``:
 
 * CumulusCI created scratch orgs default to 1 day unless the scratch config used specifies a different default.  Our default dev config is set to 7 days expiration.  The goal is to help keep your active scratch org count as low as possible while still allowing flexibility to specify different scratch orgs.
-* CumulusCI sets an alias on all scratch orgs created using the format `ProjectName__org_name` so the orgs can easily be used with the `sfdx` command.
+* CumulusCI sets an alias on all scratch orgs created using the format ``ProjectName__org_name`` so the orgs can easily be used with the ``sfdx`` command.
 * CumulusCI defaults to creating non-namespaced scratch orgs but individual scratch configs can specify that they want to be namespaced.  We've found this to be a better default than always having namespaced orgs which have issues, for example, when trying to install a managed version of the package.
 
 Scratch Org Configs
@@ -90,7 +90,7 @@ Scratch org configs in CumulusCI are named configurations to create a scratch or
 * **beta**: Intended to be used for testing a beta managed package version.  Defaults to 1 day
 * **release**: Intended to be used for testing a production managed package version.  Defaults to 1 day
 
-You can define your own scratch org configs in your project's `cumulusci.yml` file:
+You can define your own scratch org configs in your project's ``cumulusci.yml`` file:
 
 .. code-block:: yaml
 
@@ -282,17 +282,17 @@ When `update_dependencies` runs, it will still download the zip from `zip_url` b
 Injecting Namespace Prefixes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-CumulusCI has support for tokenizing references to the namespace prefix in code.  When tokenized, all occurrences of the namespace prefix (i.e. npsp__), will be replaced with `%%%NAMESPACE%%%` inside of files and `___NAMESPACE___` in file names.  If the metadata you are deploying has been tokenized, you can use the `namespace_inject` and `unmanaged` options to inject the namespace:
+CumulusCI has support for tokenizing references to the namespace prefix in code.  When tokenized, all occurrences of the namespace prefix (i.e. ``npsp__``), will be replaced with `%%%NAMESPACE%%%` inside of files and ``___NAMESPACE___`` in file names.  If the metadata you are deploying has been tokenized, you can use the `namespace_inject` and `unmanaged` options to inject the namespace:
 
 .. code-block:: yaml
 
     project:
         dependencies:
-            - zip_url: https://github.com/SalesforceFoundation/HEDAP/archive/master.zip
-              subfolder: HEDAP-master/dev_config/src/admin_config
+            - zip_url: https://github.com/SalesforceFoundation/EDA/archive/master.zip
+              subfolder: EDA-master/dev_config/src/admin_config
               namespace_inject: hed
 
-In the above example, the metadata in the zip contains the string tokens `%%%NAMESPACE%%%` and `___NAMESPACE___` which will be replaced with `hed__` before the metadata is deployed.
+In the above example, the metadata in the zip contains the string tokens ``%%%NAMESPACE%%%`` and ``___NAMESPACE___`` which will be replaced with ``hed__`` before the metadata is deployed.
 
 If you want to deploy tokenized metadata without any namespace references, you have to specify both `namespace_inject` and `unmanaged`:
 
@@ -300,8 +300,8 @@ If you want to deploy tokenized metadata without any namespace references, you h
 
     project:
         dependencies:
-            - zip_url: https://github.com/SalesforceFoundation/HEDAP/archive/master.zip
-              subfolder: HEDAP-master/dev_config/src/admin_config
+            - zip_url: https://github.com/SalesforceFoundation/EDA/archive/master.zip
+              subfolder: EDA-master/dev_config/src/admin_config
               namespace_inject: hed
               unmanaged: True
 
@@ -320,7 +320,7 @@ If the metadata in the zip you want to deploy has references to a namespace pref
               subfolder: CumulusReports-master/src
               namespace_strip: npsp
 
-When `update_dependencies` runs, the zip will be retrieved and the string `npsp__` will be stripped from all files and filenames in the zip before deployment.  This is most useful if trying to set up an unmanaged development environment for an extension package which normally uses managed dependencies.  The example above takes the NPSP Reports & Dashboards project's unmanaged metadata and strips the references to `npsp__` so you could deploy it against an unmanaged version of NPSP.
+When `update_dependencies` runs, the zip will be retrieved and the string ``npsp__`` will be stripped from all files and filenames in the zip before deployment.  This is most useful if trying to set up an unmanaged development environment for an extension package which normally uses managed dependencies.  The example above takes the NPSP Reports & Dashboards project's unmanaged metadata and strips the references to ``npsp__`` so you could deploy it against an unmanaged version of NPSP.
 
 
 Github Repository Dependencies
@@ -332,7 +332,7 @@ Github Repository dependencies create a dynamic dependency between the current p
 
     project:
         dependencies:
-            - github: https://github.com/SalesforceFoundation/HEDAP
+            - github: https://github.com/SalesforceFoundation/EDA
 
 When `update_dependencies` runs, the following is doing against the referenced repository:
 
@@ -342,7 +342,7 @@ When `update_dependencies` runs, the following is doing against the referenced r
 * Determine if the project has a namespace configured in cumulusci.yml. If found, treats the project as a managed package unless the unmanaged option is also True.
 * If the project has a namespace and is not set for unmanaged, use the Github API to get the latest release and install it.
 * If the project is an unmanaged dependency, the src directory is deployed.
-* Determine if the project has subfolders under unpackaged/post.  If found, deploys them next.  Namespace tokens are replaced with namespace__ or an empty string depending on if the dependency is considered managed or unmanaged.
+* Determine if the project has subfolders under unpackaged/post.  If found, deploys them next.  Namespace tokens are replaced with ``namespace__`` or an empty string depending on if the dependency is considered managed or unmanaged.
 
 Referencing Unmanaged Projects
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -353,10 +353,10 @@ If the referenced repository does not have a namespace configured or if the depe
 
     project:
         dependencies:
-            - github: https://github.com/SalesforceFoundation/HEDAP
+            - github: https://github.com/SalesforceFoundation/EDA
               unmanaged: True
 
-In the above example, the HEDAP repository is configured for a namespace but the dependency specifies `unmanaged: True` so the dependency would deploy unmanaged HEDAP and its dependencies. 
+In the above example, the EDA repository is configured for a namespace but the dependency specifies `unmanaged: True` so the dependency would deploy unmanaged EDA and its dependencies.
 
 Referencing a Specific Tag
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -367,10 +367,10 @@ If you want to reference a version other than HEAD and the latest production rel
 
     project:
         dependencies:
-            - github: https://github.com/SalesforceFoundation/HEDAP
+            - github: https://github.com/SalesforceFoundation/EDA
               tag: beta/1.47-Beta_2
 
-In the above example, the HEDAP repository's tag `beta/1.47-Beta_2` will be used instead of the latest production release of HEDAP (1.46 for this example).  This allows a build environment to use features in the next production release of HEDAP which are already merged but not yet included in a production release.
+In the above example, the EDA repository's tag `beta/1.47-Beta_2` will be used instead of the latest production release of EDA (1.46 for this example).  This allows a build environment to use features in the next production release of EDA which are already merged but not yet included in a production release.
 
 Skipping unpackaged/* in Reference Repositories
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -381,7 +381,7 @@ If the repository you are referring to has dependency metadata under unpackaged/
 
     project:
         dependencies:
-            - github: https://github.com/SalesforceFoundation/HEDAP
+            - github: https://github.com/SalesforceFoundation/EDA
               skip: unpackaged/post/course_connection_record_types
 
 Case Study: SalesforceFoundation/Cumulus
@@ -405,7 +405,7 @@ With this one simple line in the project's dependencies, the following dependenc
 * npe4 3.5
 * npe5 3.5
 * npsp 3.99
-* unpackaged/post/first from SalesforceFoundation/Cumulus with namespace tokens replaced with `npsp__`
+* unpackaged/post/first from SalesforceFoundation/Cumulus with namespace tokens replaced with ``npsp__``
 
 This happens because of the following from the cumulusci.yml in the the Cumulus (npsp) repository:
 
@@ -529,3 +529,118 @@ The automatic cleaning of meta.xml files can be disabled using by setting the `c
 Prior to the addition of this functionality, we often experienced unnecessary delays in our release cycle due to the need to create a new commit on master (and thus a feature branch, PR, code review, etc) just to update the meta.xml files.  CumulusCI's Github Dependency functionality already handles requiring a new production release so the only reason we needed to do this commit was the meta.xml files.  Automatically cleaning the meta.xml files on deploy eliminates the need for this commit.
 
 One drawback of this approach is that there may be diffs in the meta.xml files that developers need to handle by either ignoring them or commiting them as part of their work in a feature branch.  The diffs come from a scenario of Package B which extends Package A.  When a new production release of Package A is published, the `update_dependencies` task for Package B will install the new version.  When metadata is then retrieved from the org, the meta.xml files will reference the new version while the repository's meta.xml files reference an older version.  The main difference between this situation and the previous situation without automatically cleaning the meta.xml is that avoiding the diffs in meta.xml files is a convenience for developers rather than a requirement for builds and releases.  Developers can also use the `meta_xml_dependencies` task to update the meta.xml files locally using the versions from CumulusCI's calculated project dependencies.
+
+Source Tracking
+===============
+
+The new tasks **list_changes** and **retrieve_changes** were built to interact with the source change tracking in scratch orgs.  Using these tasks, you can get a list of new changes made in the scratch org and retrieve those changes in Metadata API format.
+
+Creating retrieve_config_* Tasks
+--------------------------------
+
+For each config directory, create a new task that wraps the retrieve_changes task using yaml like below:
+
+.. code-block:: yaml
+
+    tasks:
+        retrieve_config_dev:
+            description: Retrieves the current changes in the scratch org into unpackaged/config/dev
+            class_path: cumulusci.tasks.salesforce.sourcetracking.RetrieveChanges
+            options:
+                path: unpackaged/config/dev
+                namespace_tokenize: $project_config.project__package__namespace
+
+Setting up the Capture Scratch Org
+----------------------------------
+
+When capturing post-install configuration, it is best to work with a managed version of the product.  This will ensure that namespace references are replaced by CumulusCI's namespace token strings, resulting in retrieved config metadata that works with both managed and unmanaged deployments.
+
+.. code-block:: console
+
+    cci flow run install_beta --org dev
+
+Starting a Snapshot
+-------------------
+
+When you are ready to start making declarative changes you want to capture, start by creating a snapshot, which will effectively set the source tracking to treat all current changes as already handled.  This will mean the list_changes command will list any new metadata but ignore any phantom changes from before
+
+.. code-block:: console
+
+    cci task run list_changes --org dev -o snapshot True
+
+To check to make sure the snapshot was created correctly, you should see no changes listed when re-running list_changes
+
+.. code-block:: console
+
+    cci task run list_changes --org dev
+
+Retrieving Changes
+------------------
+
+Now, go make the changes in the org you want to capture as part of the dev config.  You can check what metadata has changed with the list_changes command
+
+.. code-block:: console
+
+    cci task run list_changes --org dev
+
+You can also include/exclude files from the list using the include/exclude options
+
+.. code-block:: console
+
+    cci task run list_changes --org dev -o include "test.*,another_regex" \
+                                        -o exclude "something_to_exclude"
+
+When you are ready to capture the changes returned from list_changes, run the custom retrieve task
+
+.. code-block:: console
+
+    cci task run retrieve_config_dev --org dev
+
+If you used include/exclude to narrow down the list of changes, you can pass the same -o include and -o exclude arguments to the retrieve_config_dev task
+
+Source Code Formats
+===================
+
+CumulusCI supports two different formats for storing the source code for a package:
+
+1. The `metadata package format <https://developer.salesforce.com/docs/atlas.en-us.api_meta.meta/api_meta/file_based_zip_file.htm>`_ used by the Metadata API, Force.com IDE, and Ant Migration Tool. This format is optimized for deploying directly to a packaging org without modification. CumulusCI always deploys this format using the Metadata API.
+2. The `Salesforce DX source format <https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_source_file_format.htm>`_. It is optimized for developer usability with tools such as the Salesforce CLI (sfdx) and Salesforce Extensions for VS Code. When deploying a DX-format package to a scratch org, CumulusCI will do so using the ``sfdx force:source:push`` command. For orgs that do not support source tracking, such as a Developer Edition packaging org, it will convert the package to metadata format and then deploy using the Metadata API.
+
+By default, CumulusCI assumes your source code is in the metadata format.
+Tell it to use DX format instead in cumulusci.yml::
+
+.. code-block:: yaml
+
+    project:
+        source_format: sfdx
+
+Converting a project to DX format
+---------------------------------
+
+Assuming you have existing metadata-format source code in the ``src`` directory,
+follow these steps to convert your project to store DX format source code in the ``force-app`` directory:
+
+1. Make sure sfdx-project.json specifies a path for the default package directory:
+
+.. code-block:: yaml
+
+    {
+    "packageDirectories": [
+        {
+        "path": "force-app",
+        "default": true
+        }
+    ],
+    "sourceApiVersion": "45.0”
+    }
+
+2. Add ``source_format: sfdx`` to the project section of ``cumulusci.yml``.
+3. Convert the source by running ``sfdx force:mdapi:convert -r src``
+4. Remove the ``src`` directory.
+
+Now when you set up a new scratch org (for example by running the dev_org flow),
+the source should get pushed successfully from the ``force-app`` directory.
+
+Caveats:
+* It’s possible there may be some minor errors in the automatic conversion that need special attention in order to deploy successfully.
+* See https://ntotten.com/2018/05/11/convert-metadata-to-source-format-while-maintain-git-history/ for some tips on preserving git history while converting your source format.

@@ -8,6 +8,8 @@ import re
 import sarge
 from simple_salesforce import Salesforce
 
+from cumulusci.utils import get_git_config
+from cumulusci.core.sfdx import sfdx
 from cumulusci.core.config import FAILED_TO_CREATE_SCRATCH_ORG
 from cumulusci.core.config import OrgConfig
 from cumulusci.core.exceptions import ScratchOrgException
@@ -36,16 +38,7 @@ class ScratchOrgConfig(OrgConfig):
 
         # Call force:org:display and parse output to get instance_url and
         # access_token
-        command = sarge.shell_format(
-            "sfdx force:org:display -u {0} --json", self.username
-        )
-        p = sarge.Command(
-            command,
-            stderr=sarge.Capture(buffer_size=-1),
-            stdout=sarge.Capture(buffer_size=-1),
-            shell=True,
-        )
-        p.run()
+        p = sfdx("force:org:display --json", self.username)
 
         org_info = None
         stderr_list = [line.strip() for line in io.TextIOWrapper(p.stderr)]
@@ -62,8 +55,6 @@ class ScratchOrgConfig(OrgConfig):
             raise ScratchOrgException(message)
 
         else:
-            json_txt = "".join(stdout_list)
-
             try:
                 org_info = json.loads("".join(stdout_list))
             except Exception as e:
@@ -139,6 +130,15 @@ class ScratchOrgConfig(OrgConfig):
         return password
 
     @property
+    def email_address(self):
+        email_address = self.config.get("email_address")
+        if not email_address:
+            email_address = get_git_config("user.email")
+            self.config["email_address"] = email_address
+
+        return email_address
+
+    @property
     def days(self):
         return self.config.setdefault("days", 1)
 
@@ -165,6 +165,14 @@ class ScratchOrgConfig(OrgConfig):
         if not self.scratch_org_type:
             self.config["scratch_org_type"] = "workspace"
 
+        # If the scratch org definition itself contains an `adminEmail` entry,
+        # we don't want to override it from our own configuration, which may
+        # simply come from the user's Git config.
+
+        with open(self.config_file, "r") as org_def:
+            org_def_data = json.load(org_def)
+            org_def_has_email = "adminEmail" in org_def_data
+
         options = {
             "config_file": self.config_file,
             "devhub": " --targetdevhubusername {}".format(self.devhub)
@@ -175,22 +183,19 @@ class ScratchOrgConfig(OrgConfig):
             "alias": sarge.shell_format(' -a "{0!s}"', self.sfdx_alias)
             if self.sfdx_alias
             else "",
+            "email": sarge.shell_format('adminEmail="{0!s}"', self.email_address)
+            if self.email_address and not org_def_has_email
+            else "",
+            "default": " -s" if self.default else "",
             "extraargs": os.environ.get("SFDX_ORG_CREATE_ARGS", ""),
         }
 
         # This feels a little dirty, but the use cases for extra args would mostly
         # work best with env vars
-        command = "sfdx force:org:create -f {config_file}{devhub}{namespaced}{days}{alias} {extraargs}".format(
+        command = "force:org:create -f {config_file}{devhub}{namespaced}{days}{alias}{default} {email} {extraargs}".format(
             **options
         )
-        self.logger.info("Creating scratch org with command {}".format(command))
-        p = sarge.Command(
-            command,
-            stdout=sarge.Capture(buffer_size=-1),
-            stderr=sarge.Capture(buffer_size=-1),
-            shell=True,
-        )
-        p.run()
+        p = sfdx(command, username=None, log_note="Creating scratch org")
 
         stderr = [line.strip() for line in io.TextIOWrapper(p.stderr)]
         stdout = [line.strip() for line in io.TextIOWrapper(p.stdout)]
@@ -227,19 +232,12 @@ class ScratchOrgConfig(OrgConfig):
             return
 
         # Set a random password so it's available via cci org info
-        command = sarge.shell_format(
-            "sfdx force:user:password:generate -u {0}", self.username
+
+        p = sfdx(
+            "force:user:password:generate",
+            self.username,
+            log_note="Generating scratch org user password",
         )
-        self.logger.info(
-            "Generating scratch org user password with command {}".format(command)
-        )
-        p = sarge.Command(
-            command,
-            stdout=sarge.Capture(buffer_size=-1),
-            stderr=sarge.Capture(buffer_size=-1),
-            shell=True,
-        )
-        p.run()
 
         stderr = io.TextIOWrapper(p.stderr).readlines()
         stdout = io.TextIOWrapper(p.stdout).readlines()
@@ -265,12 +263,8 @@ class ScratchOrgConfig(OrgConfig):
             )
             return
 
-        command = sarge.shell_format("sfdx force:org:delete -p -u {0}", self.username)
-        self.logger.info("Deleting scratch org with command {}".format(command))
-        p = sarge.Command(command, stdout=sarge.Capture(buffer_size=-1), shell=True)
-        p.run()
+        p = sfdx("force:org:delete -p", self.username, "Deleting scratch org")
 
-        org_info = None
         stdout = []
         for line in io.TextIOWrapper(p.stdout):
             stdout.append(line)
@@ -283,17 +277,15 @@ class ScratchOrgConfig(OrgConfig):
             message = "Failed to delete scratch org: \n{}".format("".join(stdout))
             raise ScratchOrgException(message)
 
-        # Flag that this org has been created
+        # Flag that this org has been deleted
         self.config["created"] = False
         self.config["username"] = None
+        self.config["date_created"] = None
 
     def force_refresh_oauth_token(self):
         # Call force:org:display and parse output to get instance_url and
         # access_token
-        command = sarge.shell_format("sfdx force:org:open -r -u {0}", self.username)
-        self.logger.info("Refreshing OAuth token with command: {}".format(command))
-        p = sarge.Command(command, stdout=sarge.Capture(buffer_size=-1), shell=True)
-        p.run()
+        p = sfdx("force:org:open -r", self.username, log_note="Refreshing OAuth token")
 
         stdout_list = [line.strip() for line in io.TextIOWrapper(p.stdout)]
 
@@ -318,3 +310,5 @@ class ScratchOrgConfig(OrgConfig):
 
         # Get org info via sfdx force:org:display
         self.scratch_info
+        # Get additional org info by querying API
+        self._load_orginfo()

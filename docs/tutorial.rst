@@ -2,87 +2,78 @@
 Tutorial
 ========
 
-This tutorial is for macOS. Linux and Windows are not yet officially supported but should work for the most part. We have added some Windows info where possible.
+This tutorial is for macOS. Linux and Windows are not yet officially supported but should work for the most part. We have added some Windows and Linux info where possible.
 
 Part 1: Installing CumulusCI
 ============================
 
-On macOS and Linux, the easiest way to install CumulusCI is using `homebrew <https://docs.brew.sh/>`_  and `linuxbrew <https://linuxbrew.sh/>`_, respectively:
-
-.. code-block:: console
-
-    $ brew tap SFDO-Tooling/homebrew-sfdo
-    $ brew install cumulusci
-
-The rest of this tutorial describes installing CumulusCI via pip.
-
-Install Requirements
---------------------
-
-CumulusCI supports Python 2.7, 3.6, or 3.7.
-
-macOS
-^^^^^
-
-Install Python 3: https://www.python.org/downloads/mac-osx/
-
-Windows
-^^^^^^^
-
-Install Python 3: https://www.python.org/downloads/windows/
-
-In the installer, be sure to check the "Add Python to PATH" checkbox.
-
-Create Virtual Environment
---------------------------
-
-A Python Virtual Environment (virtualenv) is an isolated Python environment where you can install packages without modifying the system Python.  Using a virtualenv for cumulusci is recommended to avoid issues and conflicts with other applications using your system Python.
-
-macOS
-^^^^^
-
-.. code-block:: console
-
-    $ python3 -m venv cci
-
-This creates a virtualenv in a new folder named ``cci``. Whenever you want to work with commands installed in this virtualenv, you must first activate it:
-
-.. code-block:: console
-
-    $ source cci/bin/activate
-
-Your shell prompt should change once you are in the virtual env to show (cci) at the start of the prompt.  You can exit the cci virtualenv with the following command:
-
-.. code-block:: console
-
-    (cci) $ deactivate
-
-If you would like to automatically activate the virtual environment whenever you open a new terminal, you can add the activate command to your ``~/.bash_profile``.
-
-For more information about virtual environments in Python, see the Python Packaging User Guide: https://packaging.python.org/tutorials/installing-packages/#creating-virtual-environments
-
-Windows
-^^^^^^^
-
-.. code-block:: powershell
-
-    python -m venv ~\cci
-    ~\cci\Scripts\Activate.ps1
-
-.. note::
-   If this fails because you don't have the ability to run scripts,
-   try running: ``Set-ExecutionPolicy Unrestricted -Scope CurrentUser``
-
 Install CumulusCI
 -----------------
 
-With the virtual environment now activated, install cumulusci using pip:
+macOS/Linux
+^^^^^^^^^^^
 
-.. code-block:: console
+On macOS and Linux, the easiest way to install CumulusCI is using `homebrew <https://docs.brew.sh/>`_ :
 
-    $ pip install cumulusci
+.. code:: console
 
-Errors during pip install are usually instructive, but there can be a lot of log, so make sure to scroll back for anything in red or important looking.
+   $ brew tap SFDO-Tooling/homebrew-sfdo
+   $ brew install cumulusci
+
+Windows
+^^^^^^^
+
+Python
+~~~~~~
+
+First, install Python 3: https://www.python.org/downloads/windows/
+
+In the installer, be sure to check the "Add Python to PATH" checkbox.
+
+pipx
+~~~~
+
+On Windows 10, the easiest way to install CumulusCI is using
+`pipx <https://github.com/pipxproject/pipx>`_. In a new command prompt, run:
+
+.. code:: powershell
+
+   python -m pip install --user pipx
+
+Add the following paths to your ``PATH`` environment variable:
+
+1. ``%USERPROFILE%\AppData\Roaming\Python\Python37\Scripts``
+2. ``%USERPROFILE%\.local\bin``
+
+.. note::
+
+   From the `Python
+   documentation <https://docs.python.org/3/using/windows.html#excursus-setting-environment-variables>`_:
+   To permanently modify the default environment variables, click Start and
+   search for ‘edit environment variables’, or open System properties,
+   Advanced system settings and click the Environment Variables button. In
+   this dialog, you can add or modify User and System variables. To change
+   System variables, you need non-restricted access to your machine (i.e.
+   Administrator rights)
+
+In a new command prompt, run: ``pipx install cumulusci``
+
+.. code:: powershell
+
+   pipx install cumulusci
+
+Verify CumulusCI
+^^^^^^^^^^^^^^^^
+
+In a new terminal window or command prompt you can verify that CumulusCI
+is installed correctly by running ``cci version``:
+
+.. code:: console
+
+   $ cci version
+   Checking the version!
+   2.5.2
+
 Still need help? Search issues on CumulusCI GitHub https://github.com/SFDO-Tooling/CumulusCI/issues
 
 Part 2: Project Configuration
@@ -261,13 +252,13 @@ So, let's try that all out.  One important thing to note is that CumulusCI autom
     dev                 *        dev
     feature             *        feature
     release             *        release
-    
+
 Although CumulusCI has those scratch org configs in its org list, no actual scratch orgs have been created yet.  The reason why is that scratch orgs in the CumulusCI keychain are really just a lazy configuration to create a scratch org.  An actual scratch org will be created when you try to do something against that org name (i.e. `dev`) for the first time.  If you run an action against a scratch org config that hasn't yet generated a scratch org, it will create the org and remember that it has now created the org:
 
 .. code-block:: console
 
     $ cci org info dev
-    2017-11-02 15:20:04: Creating scratch org with command sfdx force:org:create -f orgs/dev.json -n -a "CumulusCI Test__dev" 
+    2017-11-02 15:20:04: Creating scratch org with command sfdx force:org:create -f orgs/dev.json -n -a "CumulusCI Test__dev"
     2017-11-02 15:20:15: Successfully created scratch org: 00D..., username: test-...@cumulusci-test_dev_workspace.net
     2017-11-02 15:20:15: Generating scratch org user password with command sfdx force:user:password:generate -u test-...@cumulusci-test_dev_workspace.net
     2017-11-02 15:20:18: Getting scratch org info from Salesforce DX
@@ -284,7 +275,7 @@ Although CumulusCI has those scratch org configs in its org list, no actual scra
     password: Random Password Would be Here
     instance_url: https://inspiration-speed-3192-dev-ed.cs66.my.salesforce.com
 
-Now, if we look at the org list, we can see a username for our scratch org.  That means `dev` now has a real scratch org connect to it:
+Now, if we look at the org list, we can see a username for our scratch org.  That means `dev` now has a real scratch org connected to it:
 
 .. code-block:: console
 
@@ -553,7 +544,7 @@ You can run a task:
 .. code-block:: console
 
     $ cci task run update_package_xml
-    
+
     2016-11-03 11:57:53: Generating src/package.xml from metadata in src
 
 Task Options
@@ -697,7 +688,7 @@ To set up our newly connected dev org, run the dev_org flow:
     2016-11-03 12:01:48:   deploy: Deploys the src directory of the repository to the org
     2016-11-03 12:01:48:   uninstall_packaged_incremental: Deletes any metadata from the package in the target org not in the local workspace
     2016-11-03 12:01:48:   deploy_post: Deploys all metadata bundles under unpackaged/post/
-    2016-11-03 12:01:48: 
+    2016-11-03 12:01:48:
     2016-11-03 12:01:48: Running task: create_package
     2016-11-03 12:01:49: Options:
     2016-11-03 12:01:49:   api_version: 33.0
@@ -705,11 +696,11 @@ To set up our newly connected dev org, run the dev_org flow:
     2016-11-03 12:01:49: Pending
     2016-11-03 12:01:53: [Done]
     2016-11-03 12:01:54: [Success]: Succeeded
-    2016-11-03 12:01:54: 
+    2016-11-03 12:01:54:
     2016-11-03 12:01:54: Running task: update_dependencies
     2016-11-03 12:01:56: Options:
     2016-11-03 12:01:56: Project has no dependencies, doing nothing
-    2016-11-03 12:01:56: 
+    2016-11-03 12:01:56:
     2016-11-03 12:01:56: Running task: deploy_pre
     2016-11-03 12:01:56: Options:
     2016-11-03 12:01:56:   path: unpackaged/pre
@@ -727,7 +718,7 @@ To set up our newly connected dev org, run the dev_org flow:
     2016-11-03 12:02:09: [InProgress]: Processing Type: CustomObject
     2016-11-03 12:02:12: [Done]
     2016-11-03 12:02:13: [Success]: Succeeded
-    2016-11-03 12:02:13: 
+    2016-11-03 12:02:13:
     2016-11-03 12:02:13: Running task: deploy
     2016-11-03 12:02:14: Options:
     2016-11-03 12:02:14:   path: src
@@ -738,7 +729,7 @@ To set up our newly connected dev org, run the dev_org flow:
     2016-11-03 12:02:22: [InProgress]: Processing Type: ApexClass
     2016-11-03 12:02:28: [Done]
     2016-11-03 12:02:29: [Success]: Succeeded
-    2016-11-03 12:02:29: 
+    2016-11-03 12:02:29:
     2016-11-03 12:02:29: Running task: uninstall_packaged_incremental
     2016-11-03 12:02:29: Options:
     2016-11-03 12:02:29:   path: src
@@ -750,7 +741,7 @@ To set up our newly connected dev org, run the dev_org flow:
     2016-11-03 12:02:35: Pending
     2016-11-03 12:02:41: [Done]
     2016-11-03 12:02:42: [Success]: Succeeded
-    2016-11-03 12:02:42: 
+    2016-11-03 12:02:42:
     2016-11-03 12:02:42: Running task: deploy_post
     2016-11-03 12:02:43: Options:
     2016-11-03 12:02:43:   namespace_token: %%%NAMESPACE%%%
@@ -794,20 +785,21 @@ Beta Test
 The `ci_beta` flow uses the Github API to determine the latest beta release for the project.  NOTE: This requires that you're using `release_beta` to create Github Releases:
 
 .. code-block:: console
-   $ cci flow run ci_beta --org beta
+
+    $ cci flow run ci_beta --org beta
 
 You can also pass the version number:
 
 .. code-block:: console
 
-   $ cci flow run ci_beta --org beta -o install_managed_beta__version "1.1 (Beta 12)"
+    $ cci flow run ci_beta --org beta -o install_managed_beta__version "1.1 (Beta 12)"
 
 Automate it with MetaCI
 -----------------------
 
 Once you have these flows set up, you can now use MetaCI to run these same builds against your project automatically on Heroku.  For more information, check out http://metaci-cli.readthedocs.io
 
-    
+
 Part 7: Digging Deeper
 ======================
 
@@ -821,7 +813,7 @@ Create a local python tasks module:
     $ mkdir tasks
     $ touch tasks/__init__.py
 
-Create the file `tasks/salesforce.py` with the following content:
+Create the file **tasks/salesforce.py** with the following content:
 
 .. code-block:: python
 

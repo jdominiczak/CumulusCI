@@ -229,14 +229,19 @@ class BaseTask(object):
             )
 
     def freeze(self, step):
-        return [
+        ui_step = {
+            "name": self.task_config.name or self.name,
+            "kind": "other",
+            "is_required": True,
+        }
+        ui_step.update(self.task_config.config.get("ui_options", {}))
+        task_config = {"options": self.options, "checks": self.task_config.checks or []}
+        ui_step.update(
             {
-                "name": self.task_config.name or self.name,
-                "kind": "other",
-                "is_required": True,
                 "path": step.path,
                 "step_num": str(step.step_num),
                 "task_class": self.task_config.class_path,
-                "task_config": {"options": self.options},
+                "task_config": task_config,
             }
-        ]
+        )
+        return [ui_step]

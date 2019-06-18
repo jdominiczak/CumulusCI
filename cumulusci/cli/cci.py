@@ -4,6 +4,7 @@ from future import standard_library
 standard_library.install_aliases()
 from past.builtins import basestring
 from builtins import str
+from collections import defaultdict
 from collections import OrderedDict
 import functools
 import json
@@ -38,7 +39,7 @@ from cumulusci.core.exceptions import OrgNotFound
 from cumulusci.core.exceptions import ScratchOrgException
 from cumulusci.core.exceptions import ServiceNotConfigured
 from cumulusci.core.exceptions import TaskNotFoundError
-from cumulusci.core.utils import import_class
+from cumulusci.core.utils import import_global
 from cumulusci.cli.config import CliRuntime
 from cumulusci.cli.config import get_installed_version
 from cumulusci.utils import doc_task
@@ -234,7 +235,10 @@ def main():
 
     This runs as the first step in processing any CLI command.
     """
-    check_latest_version()
+    # Avoid checking for updates if we've been asked to output JSON,
+    # because we don't want to pollute the output
+    if "--json" not in sys.argv:
+        check_latest_version()
     log_requests = "--debug" in sys.argv
     init_logger(log_requests=log_requests)
 
@@ -364,24 +368,24 @@ def project_init(config):
     dependencies = []
     click.echo(click.style("# Extend Project", bold=True, fg="blue"))
     click.echo(
-        "CumulusCI makes it easy to build extensions of other projects configured for CumulusCI like Salesforce.org's NPSP and HEDA.  If you are building an extension of another project using CumulusCI and have access to its Github repository, use this section to configure this project as an extension."
+        "CumulusCI makes it easy to build extensions of other projects configured for CumulusCI like Salesforce.org's NPSP and EDA.  If you are building an extension of another project using CumulusCI and have access to its Github repository, use this section to configure this project as an extension."
     )
     if click.confirm(
         click.style(
-            "Are you extending another CumulusCI project such as NPSP or HEDA?",
+            "Are you extending another CumulusCI project such as NPSP or EDA?",
             bold=True,
         ),
         default=False,
     ):
         click.echo("Please select from the following options:")
-        click.echo("  1: HEDA (https://github.com/SalesforceFoundation/HEDAP)")
+        click.echo("  1: EDA (https://github.com/SalesforceFoundation/EDA)")
         click.echo("  2: NPSP (https://github.com/SalesforceFoundation/Cumulus)")
         click.echo(
             "  3: Github URL (provide a URL to a Github repository configured for CumulusCI)"
         )
         selection = click.prompt(click.style("Enter your selection", bold=True))
         github_url = {
-            "1": "https://github.com/SalesforceFoundation/HEDAP",
+            "1": "https://github.com/SalesforceFoundation/EDA",
             "2": "https://github.com/SalesforceFoundation/Cumulus",
         }.get(selection)
         if github_url is None:
@@ -487,6 +491,7 @@ def project_init(config):
                 package_name=context["package_name"],
                 org_name="Beta Test Org",
                 edition="Developer",
+                managed=True,
             )
         )
     with open(os.path.join("orgs", "dev.json"), "w") as f:
@@ -495,6 +500,7 @@ def project_init(config):
                 package_name=context["package_name"],
                 org_name="Dev Org",
                 edition="Developer",
+                managed=False,
             )
         )
     with open(os.path.join("orgs", "feature.json"), "w") as f:
@@ -503,6 +509,7 @@ def project_init(config):
                 package_name=context["package_name"],
                 org_name="Feature Test Org",
                 edition="Developer",
+                managed=False,
             )
         )
     with open(os.path.join("orgs", "release.json"), "w") as f:
@@ -511,14 +518,19 @@ def project_init(config):
                 package_name=context["package_name"],
                 org_name="Release Test Org",
                 edition="Enterprise",
+                managed=True,
             )
         )
 
-    # Create initial create_contact.robot test
-    if not os.path.isdir("tests"):
-        os.mkdir("tests")
-        test_folder = os.path.join("tests", "standard_objects")
-        os.mkdir(test_folder)
+    # create robot folder structure and starter files
+    if not os.path.isdir("robot"):
+        test_folder = os.path.join("robot", context["project_name"], "tests")
+        resource_folder = os.path.join("robot", context["project_name"], "resources")
+        doc_folder = os.path.join("robot", context["project_name"], "doc")
+
+        os.makedirs(test_folder)
+        os.makedirs(resource_folder)
+        os.makedirs(doc_folder)
         test_src = os.path.join(
             cumulusci.__location__,
             "robotframework",
@@ -613,7 +625,14 @@ class ConnectServiceCommand(click.MultiCommand):
     def get_command(self, ctx, name):
         config = load_config(**self.load_config_kwargs)
         services = self._get_services_config(config)
-        attributes = services.get(name, {}).get("attributes").items()
+        try:
+            service_config = services[name]
+        except KeyError:
+            raise click.UsageError(
+                "Sorry, I don't know about the '{0}' service.".format(name)
+            )
+        attributes = service_config["attributes"].items()
+
         params = [self._build_param(attr, cnfg) for attr, cnfg in attributes]
         if not config.is_global_keychain:
             params.append(click.Option(("--project",), is_flag=True))
@@ -622,15 +641,27 @@ class ConnectServiceCommand(click.MultiCommand):
             if config.is_global_keychain:
                 project = False
             else:
-                project = kwargs.get("project", False)
+                project = kwargs.pop("project", False)
             serv_conf = dict(
                 (k, v) for k, v in list(kwargs.items()) if v is not None
             )  # remove None values
+
+            # A service can define a callable to validate the service config
+            validator_path = service_config.get("validator")
+            if validator_path:
+                validator = import_global(validator_path)
+                try:
+                    validator(serv_conf)
+                except Exception as e:
+                    raise click.UsageError(str(e))
+
             config.keychain.set_service(name, ServiceConfig(serv_conf), project)
             if project:
-                click.echo("{0} is now configured for this project".format(name))
+                click.echo("{0} is now configured for this project.".format(name))
             else:
-                click.echo("{0} is now configured for global use".format(name))
+                click.echo(
+                    "{0} is now configured for all CumulusCI projects.".format(name)
+                )
 
         ret = click.Command(name, params=params, callback=callback)
         return ret
@@ -783,7 +814,15 @@ def org_info(config, org_name, print_json):
     org_config.refresh_oauth_token(config.keychain)
 
     if print_json:
-        click.echo(json.dumps(org_config.config, sort_keys=True, indent=4))
+        click.echo(
+            json.dumps(
+                org_config.config,
+                sort_keys=True,
+                indent=4,
+                default=str,
+                separators=(",", ": "),
+            )
+        )
     else:
         render_recursive(org_config.config)
 
@@ -969,6 +1008,11 @@ def task_list(config):
 def task_doc(config):
     config_src = config.global_config
 
+    click.echo("==========================================")
+    click.echo("Tasks Reference")
+    click.echo("==========================================")
+    click.echo("")
+
     for name, options in list(config_src.tasks.items()):
         task_config = TaskConfig(options)
         doc = doc_task(name, task_config)
@@ -1026,7 +1070,7 @@ def task_run(config, task_name, org, o, debug, debug_before, debug_after, no_pro
 
     # Get the class to look up options
     class_path = task_config.get("class_path")
-    task_class = import_class(class_path)
+    task_class = import_global(class_path)
 
     # Parse command line options and add to task config
     if o:
@@ -1071,8 +1115,8 @@ def task_run(config, task_name, org, o, debug, debug_before, debug_after, no_pro
     except Exception:
         # Unexpected exception; log to sentry and raise
         handle_exception_debug(config, debug, no_prompt=no_prompt)
-
-    config.alert("Task complete: {}".format(task_name))
+    finally:
+        config.alert("Task complete: {}".format(task_name))
 
 
 # Add the task commands to the task group
@@ -1097,7 +1141,7 @@ def flow_list(config):
     click.echo("")
     click.echo(
         "Use "
-        + click.style("cci flow info <task_name>", bold=True)
+        + click.style("cci flow info <flow_name>", bold=True)
         + " to get more information about a flow."
     )
 
@@ -1149,11 +1193,11 @@ def flow_run(config, flow_name, org, delete_org, debug, o, skip, no_prompt):
         raise click.UsageError("--delete-org can only be used with a scratch org")
 
     # Parse command line options
-    options = {}
+    options = defaultdict(dict)
     if o:
         for key, value in o:
             task_name, option_name = key.split("__")
-            options[key] = value
+            options[task_name][option_name] = value
 
     # Create the flow and handle initialization exceptions
     try:
@@ -1167,6 +1211,8 @@ def flow_run(config, flow_name, org, delete_org, debug, o, skip, no_prompt):
         handle_exception_debug(config, debug, throw_exception=exception)
     except Exception:
         handle_exception_debug(config, debug, no_prompt=no_prompt)
+    finally:
+        config.alert("Flow Complete: {}".format(flow_name))
 
     # Delete the scratch org if --delete-org was set
     if delete_org:
@@ -1177,8 +1223,6 @@ def flow_run(config, flow_name, org, delete_org, debug, o, skip, no_prompt):
                 "Scratch org deletion failed.  Ignoring the error below to complete the flow:"
             )
             click.echo(str(e))
-
-    config.alert("Flow Complete: {}".format(flow_name))
 
 
 flow.add_command(flow_list)

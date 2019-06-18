@@ -1,14 +1,12 @@
-from builtins import str
 from future import standard_library
 
 standard_library.install_aliases()
+
 import os
 import re
 import urllib.parse
 
-import xml.etree.ElementTree as ET
 from cumulusci.core.utils import ordered_yaml_load
-
 from cumulusci.core.tasks import BaseTask
 from cumulusci.utils import elementtree_parse_file
 
@@ -55,6 +53,7 @@ class PackageXmlGenerator(object):
         delete=None,
         install_class=None,
         uninstall_class=None,
+        types=None,
     ):
         with open(__location__ + "/metadata_map.yml", "r") as f_metadata_map:
             self.metadata_map = ordered_yaml_load(f_metadata_map)
@@ -65,10 +64,11 @@ class PackageXmlGenerator(object):
         self.delete = delete
         self.install_class = install_class
         self.uninstall_class = uninstall_class
-        self.types = []
+        self.types = types or []
 
     def __call__(self):
-        self.parse_types()
+        if not self.types:
+            self.parse_types()
         return self.render_xml()
 
     def parse_types(self):
@@ -189,7 +189,10 @@ class BaseMetadataParser(object):
     def parse_item(self, item):
         members = self._parse_item(item)
         if members:
-            self.members.extend(members)
+            for member in members:
+                # Translate filename namespace tokens into in-file namespace tokens
+                member = member.replace("___NAMESPACE___", "%%%NAMESPACE%%%")
+                self.members.append(member)
 
     def _parse_item(self, item):
         "Receives a file or directory name and returns a list of members"
@@ -355,11 +358,19 @@ class BusinessProcessParser(MetadataXmlElementParser):
             return True
 
 
-class AuraBundleParser(MetadataFilenameParser):
+class BundleParser(BaseMetadataParser):
     def _parse_item(self, item):
-        if item.startswith("."):
-            return []
-        return [item]
+        members = []
+        path = self.directory + "/" + item
+
+        # Skip non-directories
+        if not os.path.isdir(path):
+            return members
+
+        # item is a directory; add directory to members and ignore processing directory's files
+        members.append(item)
+
+        return members
 
 
 class DocumentParser(MetadataFolderParser):
