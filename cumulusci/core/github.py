@@ -1,7 +1,7 @@
 """Wraps the github3 library to configure request retries."""
 
 from cumulusci.core.exceptions import GithubException
-from github3 import login
+from github3 import enterprise_login
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 
@@ -10,7 +10,9 @@ adapter = HTTPAdapter(max_retries=retries)
 
 
 def get_github_api(username, password):
-    gh = login(username, password)
+    gh = enterprise_login(
+        url="https://git.uncc.edu", username=username, password=password
+    )
     gh.session.mount("http://", adapter)
     gh.session.mount("https://", adapter)
     return gh

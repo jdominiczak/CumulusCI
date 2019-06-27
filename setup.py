@@ -43,7 +43,7 @@ setup(
     url="https://github.com/SFDO-Tooling/CumulusCI",
     packages=list(find_packages(["cumulusci"], "cumulusci")),
     package_dir={"cumulusci": "cumulusci"},
-    entry_points={"console_scripts": ["cci=cumulusci.cli.cci:main"]},
+    entry_points={"console_scripts": ["cciu=cumulusci.cli.cci:main"]},
     include_package_data=True,
     install_requires=requirements,
     license="BSD license",
