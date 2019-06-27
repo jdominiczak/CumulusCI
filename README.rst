@@ -2,6 +2,10 @@
 CumulusCI
 ===============================
 
+Changes
+===============================
+Launch this version by using `cciu`_. This avoids any conflict with the official version.
+
 .. image:: https://img.shields.io/pypi/v/cumulusci.svg
            :target: https://pypi.org/project/cumulusci/
 .. image:: https://readthedocs.org/projects/cumulusci/badge/?version=latest
